@@ -1,0 +1,298 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role and productivity settings",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User visible name",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 150
+        },
+        "role": {
+          "type": "string",
+          "description": "Student, Developer, Professional, or Custom",
+          "maxLength": 50
+        },
+        "dailyFocusTargetMinutes": {
+          "type": "number",
+          "description": "Daily focus goal in minutes"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Avatar image URL or preset identifier",
+          "maxLength": 2048
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short bio or motto",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["userId", "displayName", "email"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Daily goal or task item",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Task title",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "notes": {
+          "type": "string",
+          "description": "Detailed notes or links",
+          "maxLength": 2000
+        },
+        "category": {
+          "type": "string",
+          "description": "Category: Study, Work, Health/Fitness, Personal",
+          "enum": ["Study", "Work", "Health/Fitness", "Personal"]
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority level: high, medium, low",
+          "enum": ["high", "medium", "low"]
+        },
+        "date": {
+          "type": "string",
+          "description": "Target completion date in YYYY-MM-DD format",
+          "maxLength": 10
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Completion flag"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "ISO timestamp of completion or null",
+          "maxLength": 50
+        },
+        "estimatedPomodoros": {
+          "type": "number",
+          "description": "Estimated 25-minute pomodoro focus sessions"
+        },
+        "completedPomodoros": {
+          "type": "number",
+          "description": "Completed pomodoros for this task"
+        },
+        "subtasks": {
+          "type": "array",
+          "description": "List of subtasks with id, title, completed"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["userId", "title", "category", "priority", "date", "completed"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Recurring habit streak tracking item",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Habit title",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "description": {
+          "type": "string",
+          "description": "Habit routine or description",
+          "maxLength": 500
+        },
+        "category": {
+          "type": "string",
+          "description": "Study, Work, Health/Fitness, Personal",
+          "enum": ["Study", "Work", "Health/Fitness", "Personal"]
+        },
+        "frequency": {
+          "type": "string",
+          "description": "daily, weekdays, weekends",
+          "enum": ["daily", "weekdays", "weekends"]
+        },
+        "currentStreak": {
+          "type": "number",
+          "description": "Current consecutive streak days"
+        },
+        "bestStreak": {
+          "type": "number",
+          "description": "Longest consecutive streak achieved"
+        },
+        "completedDates": {
+          "type": "array",
+          "description": "List of ISO date strings YYYY-MM-DD on which habit was completed"
+        },
+        "color": {
+          "type": "string",
+          "description": "Theme color code or name",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["userId", "title", "category", "frequency", "currentStreak", "bestStreak", "completedDates"]
+    },
+    "FocusSession": {
+      "title": "FocusSession",
+      "description": "Completed pomodoro focus session record",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "taskId": {
+          "type": "string",
+          "description": "Optional associated task ID",
+          "maxLength": 128
+        },
+        "taskTitle": {
+          "type": "string",
+          "description": "Optional task title for display",
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "description": "Study, Work, Health/Fitness, Personal, or General",
+          "maxLength": 50
+        },
+        "durationMinutes": {
+          "type": "number",
+          "description": "Session duration in minutes"
+        },
+        "sessionType": {
+          "type": "string",
+          "description": "focus, shortBreak, longBreak",
+          "enum": ["focus", "shortBreak", "longBreak"]
+        },
+        "date": {
+          "type": "string",
+          "description": "Date string YYYY-MM-DD",
+          "maxLength": 10
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp completed"
+        }
+      },
+      "required": ["userId", "durationMinutes", "sessionType", "date", "completedAt"]
+    },
+    "DailyReflection": {
+      "title": "DailyReflection",
+      "description": "End-of-day journal and discipline reflection",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date string YYYY-MM-DD",
+          "maxLength": 10
+        },
+        "rating": {
+          "type": "number",
+          "description": "Discipline / productivity rating from 1 to 5"
+        },
+        "wins": {
+          "type": "string",
+          "description": "Key wins achieved today",
+          "maxLength": 1500
+        },
+        "challenges": {
+          "type": "string",
+          "description": "Obstacles or distractions encountered",
+          "maxLength": 1500
+        },
+        "tomorrowFocus": {
+          "type": "string",
+          "description": "Top priority focus for tomorrow",
+          "maxLength": 1500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["userId", "date", "rating", "wins"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile, role, and configuration"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Daily user goals and tasks"
+    },
+    "/habits/{habitId}": {
+      "schema": "Habit",
+      "description": "Habit streak tracker items and completion history"
+    },
+    "/focusSessions/{sessionId}": {
+      "schema": "FocusSession",
+      "description": "Pomodoro and focus timer completed logs"
+    },
+    "/reflections/{reflectionId}": {
+      "schema": "DailyReflection",
+      "description": "Daily wrap-up reflections and journaling entries"
+    }
+  }
+}

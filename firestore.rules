@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 50)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 300)) &&
+             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048)) &&
+             (!('dailyFocusTargetMinutes' in data) || data.dailyFocusTargetMinutes is number) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    function isValidTask(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.category in ['Study', 'Work', 'Health/Fitness', 'Personal'] &&
+             data.priority in ['high', 'medium', 'low'] &&
+             data.date is string && data.date.size() <= 10 &&
+             data.completed is bool &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+             (!('completedAt' in data) || data.completedAt == null || (data.completedAt is string && data.completedAt.size() <= 50)) &&
+             (!('estimatedPomodoros' in data) || data.estimatedPomodoros is number) &&
+             (!('completedPomodoros' in data) || data.completedPomodoros is number) &&
+             (!('subtasks' in data) || (data.subtasks is list && data.subtasks.size() <= 50));
+    }
+
+    function isValidHabit(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+             data.category in ['Study', 'Work', 'Health/Fitness', 'Personal'] &&
+             data.frequency in ['daily', 'weekdays', 'weekends'] &&
+             data.currentStreak is number &&
+             data.bestStreak is number &&
+             data.completedDates is list && data.completedDates.size() <= 1000 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             (!('color' in data) || (data.color is string && data.color.size() <= 20));
+    }
+
+    function isValidFocusSession(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.durationMinutes is number &&
+             data.sessionType in ['focus', 'shortBreak', 'longBreak'] &&
+             data.date is string && data.date.size() <= 10 &&
+             data.completedAt is string && data.completedAt.size() <= 50 &&
+             (!('taskId' in data) || (data.taskId is string && data.taskId.size() <= 128)) &&
+             (!('taskTitle' in data) || (data.taskTitle is string && data.taskTitle.size() <= 200)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50));
+    }
+
+    function isValidDailyReflection(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.date is string && data.date.size() <= 10 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             (!('wins' in data) || (data.wins is string && data.wins.size() <= 1500)) &&
+             (!('challenges' in data) || (data.challenges is string && data.challenges.size() <= 1500)) &&
+             (!('tomorrowFocus' in data) || (data.tomorrowFocus is string && data.tomorrowFocus.size() <= 1500));
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if false; // Users can never be bulk listed
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && incoming().userId == existing().userId && isValidUserProfile(incoming());
+      allow delete: if false;
+    }
+
+    // Tasks Collection
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && (resource == null || existing().userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(taskId) && incoming().userId == request.auth.uid && isValidTask(incoming());
+      allow update: if isSignedIn() && isValidId(taskId) && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidTask(incoming());
+      allow delete: if isSignedIn() && isValidId(taskId) && existing().userId == request.auth.uid;
+    }
+
+    // Habits Collection
+    match /habits/{habitId} {
+      allow get: if isSignedIn() && (resource == null || existing().userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(habitId) && incoming().userId == request.auth.uid && isValidHabit(incoming());
+      allow update: if isSignedIn() && isValidId(habitId) && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidHabit(incoming());
+      allow delete: if isSignedIn() && isValidId(habitId) && existing().userId == request.auth.uid;
+    }
+
+    // Focus Sessions Collection
+    match /focusSessions/{sessionId} {
+      allow get: if isSignedIn() && (resource == null || existing().userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(sessionId) && incoming().userId == request.auth.uid && isValidFocusSession(incoming());
+      allow update: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidFocusSession(incoming());
+      allow delete: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid;
+    }
+
+    // Daily Reflections Collection
+    match /reflections/{reflectionId} {
+      allow get: if isSignedIn() && (resource == null || existing().userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(reflectionId) && incoming().userId == request.auth.uid && isValidDailyReflection(incoming());
+      allow update: if isSignedIn() && isValidId(reflectionId) && existing().userId == request.auth.uid && incoming().userId == existing().userId && isValidDailyReflection(incoming());
+      allow delete: if isSignedIn() && isValidId(reflectionId) && existing().userId == request.auth.uid;
+    }
+  }
+}

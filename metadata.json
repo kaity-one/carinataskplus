@@ -1,0 +1,6 @@
+{
+  "name": "CarinaTaskPlus",
+  "description": "Daily goals, habit streak tracking, and focus discipline platform for students, developers, and professionals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
