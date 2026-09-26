@@ -6,7 +6,10 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut as fbSignOut,
-  updateProfile
+  updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  reload
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -105,6 +108,9 @@ export {
   createUserWithEmailAndPassword,
   fbSignOut,
   updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  reload,
   doc,
   collection,
   query,

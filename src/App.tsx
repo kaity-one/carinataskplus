@@ -16,8 +16,11 @@ import { HabitsView } from './components/HabitsView';
 import { FocusTimerView } from './components/FocusTimerView';
 import { ReflectionView } from './components/ReflectionView';
 import { ProfileView } from './components/ProfileView';
+import { ScheduleView } from './components/ScheduleView';
 import { TaskModal } from './components/TaskModal';
 import { TaskProposalModal } from './components/TaskProposalModal';
+import { FirebaseUIProvider } from '@firebase-oss/ui-react';
+import { ui } from './firebase/ui';
 import type { ViewTab } from './types';
 
 const MainLayout: React.FC = () => {
@@ -87,6 +90,7 @@ const MainLayout: React.FC = () => {
               <span className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight capitalize">
                 {currentTab === 'dashboard' ? 'Tổng quan (Dashboard)' :
                  currentTab === 'goals' ? 'Mục tiêu hàng ngày (Goals)' :
+                 currentTab === 'schedule' ? 'Thời khóa biểu & Lịch học (Google Calendar)' :
                  currentTab === 'habits' ? 'Chuỗi thói quen (Streak)' :
                  currentTab === 'focus' ? 'Đồng hồ Pomodoro (Focus)' :
                  currentTab === 'reflection' ? 'Nhật ký tổng kết ngày' :
@@ -144,7 +148,12 @@ const MainLayout: React.FC = () => {
             <GoalsView 
               onStartFocusOnTask={handleStartFocusOnTask} 
               onOpenProposalsModal={() => setIsProposalsModalOpen(true)}
+              onNavigateToSchedule={() => setCurrentTab('schedule')}
             />
+          )}
+
+          {currentTab === 'schedule' && (
+            <ScheduleView onNavigateToGoals={() => setCurrentTab('goals')} />
           )}
 
           {currentTab === 'habits' && <HabitsView />}
@@ -183,12 +192,14 @@ const MainLayout: React.FC = () => {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <DataProvider>
-          <MainLayout />
-        </DataProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <FirebaseUIProvider ui={ui}>
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <MainLayout />
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </FirebaseUIProvider>
   );
 }

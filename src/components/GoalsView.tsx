@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CheckCircle2, 
   Circle, 
@@ -11,16 +11,21 @@ import {
   ChevronDown, 
   ChevronRight, 
   CheckSquare,
-  Lightbulb
+  Lightbulb,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { getTodayString, getOffsetDateString, formatDateLabel } from '../utils/date';
-import type { Task, GoalCategory, PriorityLevel } from '../types';
+import { fireConfetti } from '../utils/confetti';
+import { playTaskDoneSound } from '../utils/audio';
+import type { Task, GoalCategory, PriorityLevel, CalendarEvent } from '../types';
 import { TaskModal } from './TaskModal';
 
 interface GoalsViewProps {
   onStartFocusOnTask: (taskId: string, title: string, category: string) => void;
   onOpenProposalsModal: () => void;
+  onNavigateToSchedule?: () => void;
 }
 
 type CategoryFilter = 'All' | GoalCategory;
@@ -41,7 +46,11 @@ const PRIORITY_ORDER: Record<PriorityLevel, number> = {
   low: 1,
 };
 
-export const GoalsView: React.FC<GoalsViewProps> = ({ onStartFocusOnTask, onOpenProposalsModal }) => {
+export const GoalsView: React.FC<GoalsViewProps> = ({ 
+  onStartFocusOnTask, 
+  onOpenProposalsModal,
+  onNavigateToSchedule 
+}) => {
   const { tasks, createTask, updateTask, toggleTask, deleteTask } = useData();
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
@@ -53,9 +62,87 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onStartFocusOnTask, onOpen
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
+  const [calendarEventsCount, setCalendarEventsCount] = useState(0);
 
   const today = getTodayString();
   const tomorrow = getOffsetDateString(1);
+
+  // Check if calendar has classes today
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('carinataskplus_calendar_events');
+      if (saved) {
+        const parsed: CalendarEvent[] = JSON.parse(saved);
+        const todayCount = parsed.filter(e => e.date === today || e.dayOfWeek === new Date().getDay()).length;
+        setCalendarEventsCount(todayCount);
+      }
+    } catch {
+      // ignore
+    }
+  }, [today]);
+
+  const handleLoadStarterPack = async () => {
+    const starterItems = [
+      {
+        title: 'Ôn tập slide bài giảng & tạo flashcard ôn bài (Active Recall)',
+        category: 'Study' as GoalCategory,
+        priority: 'high' as PriorityLevel,
+        estimatedPomodoros: 2,
+        notes: 'Ôn tập theo phương pháp ngắt quãng, tự kiểm tra không nhìn tài liệu.',
+        subtasks: ['Đọc lại ghi chú bài giảng', 'Tạo 10 thẻ hỏi đáp', 'Tự trả lời 3 câu hỏi khó']
+      },
+      {
+        title: 'Làm bài tập về nhà môn chuyên ngành (Coursework)',
+        category: 'Study' as GoalCategory,
+        priority: 'high' as PriorityLevel,
+        estimatedPomodoros: 3,
+        notes: 'Giải bài tập độc lập trước khi trao đổi với bạn bè.',
+        subtasks: ['Đọc đề bài và tóm tắt công thức', 'Giải các bài cơ bản', 'Giải bài nâng cao']
+      },
+      {
+        title: 'Học 20 từ vựng tiếng Anh học thuật (IELTS / TOEIC)',
+        category: 'Study' as GoalCategory,
+        priority: 'medium' as PriorityLevel,
+        estimatedPomodoros: 1,
+        notes: 'Học cả collocations và phát âm chuẩn.',
+      },
+      {
+        title: 'Tập thể thao 30 phút hoặc chạy bộ duy trì thể lực',
+        category: 'Health/Fitness' as GoalCategory,
+        priority: 'high' as PriorityLevel,
+        estimatedPomodoros: 2,
+        notes: 'Khởi động kỹ, chạy bộ hoặc tập gym để giải phóng năng lượng.',
+      },
+      {
+        title: 'Tổng kết ngày & lập kế hoạch 3 việc quan trọng ngày mai',
+        category: 'Personal' as GoalCategory,
+        priority: 'medium' as PriorityLevel,
+        estimatedPomodoros: 1,
+        notes: '10 phút nhìn lại các việc đã xong và dọn dẹp bàn học.',
+      }
+    ];
+
+    for (const item of starterItems) {
+      await createTask({
+        title: item.title,
+        category: item.category,
+        priority: item.priority,
+        date: today,
+        completed: false,
+        estimatedPomodoros: item.estimatedPomodoros,
+        completedPomodoros: 0,
+        notes: item.notes,
+        subtasks: item.subtasks?.map((st, i) => ({
+          id: `sub_${Date.now()}_${i}`,
+          title: st,
+          completed: false,
+        })) || [],
+      });
+    }
+
+    playTaskDoneSound();
+    fireConfetti();
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedTaskIds((prev) => {
@@ -133,6 +220,30 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onStartFocusOnTask, onOpen
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {onNavigateToSchedule && (
+            <button
+              onClick={onNavigateToSchedule}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold text-xs shadow-2xs transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <span>Thời khóa biểu (.ics)</span>
+              {calendarEventsCount > 0 && (
+                <span className="px-1.5 py-0.2 bg-blue-600 text-[10px] font-black text-white rounded-full">
+                  {calendarEventsCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={handleLoadStarterPack}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs shadow-2xs transition-all cursor-pointer"
+            title="Tự động thêm 5 mục tiêu học tập & rèn luyện chuẩn cho ngày hôm nay"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-600" />
+            <span>Nạp bộ việc sinh viên (+5)</span>
+          </button>
+
           <button
             onClick={onOpenProposalsModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold text-xs shadow-xs transition-all cursor-pointer"
@@ -267,20 +378,39 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onStartFocusOnTask, onOpen
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               Hãy điều chỉnh bộ lọc hoặc chọn từ kho gợi ý nhiệm vụ mẫu để thêm việc nhanh.
             </p>
-            <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="mt-5 flex items-center justify-center gap-2.5 flex-wrap">
+              <button
+                onClick={handleLoadStarterPack}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Nạp 5 mục tiêu sinh viên mẫu</span>
+              </button>
+
+              {onNavigateToSchedule && (
+                <button
+                  onClick={onNavigateToSchedule}
+                  className="px-4 py-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs hover:bg-blue-100 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Thời khóa biểu Google Calendar (.ics)</span>
+                </button>
+              )}
+
               <button
                 onClick={onOpenProposalsModal}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-xs hover:bg-amber-600 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-xs hover:bg-amber-600 transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <Lightbulb className="w-3.5 h-3.5" />
                 <span>Xem gợi ý nhiệm vụ</span>
               </button>
+
               <button
                 onClick={() => {
                   setEditingTask(null);
                   setIsModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition-colors cursor-pointer"
               >
                 Tạo mục tiêu mới
               </button>

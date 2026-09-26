@@ -12,7 +12,8 @@ import {
   Target,
   Sun,
   Moon,
-  Lightbulb
+  Lightbulb,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -58,6 +59,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: CheckSquare,
       badge: pendingTasksCount > 0 ? `${pendingTasksCount}` : null,
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+    },
+    {
+      id: 'schedule' as ViewTab,
+      label: 'Lịch học (Calendar)',
+      icon: Calendar,
+      badge: 'Google Cal',
+      badgeColor: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
     },
     {
       id: 'habits' as ViewTab,

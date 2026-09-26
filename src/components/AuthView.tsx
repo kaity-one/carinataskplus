@@ -15,20 +15,40 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export const AuthView: React.FC = () => {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, continueAsGuest, error, clearError } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, sendPasswordReset, continueAsGuest, error, clearError } = useAuth();
   
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('Developer');
   const [formLoading, setFormLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    setResetSuccessMessage(null);
     clearError();
+
+    if (authMode === 'forgot') {
+      if (!email.trim()) {
+        setLocalError('Please enter your email address to receive reset instructions.');
+        return;
+      }
+      setFormLoading(true);
+      try {
+        await sendPasswordReset(email.trim());
+        setResetSuccessMessage(`Password reset link sent to ${email.trim()}! Please check your inbox.`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to send password reset email';
+        setLocalError(msg);
+      } finally {
+        setFormLoading(false);
+      }
+      return;
+    }
 
     if (!email || !password) {
       setLocalError('Please enter both email and password.');
@@ -42,7 +62,7 @@ export const AuthView: React.FC = () => {
 
     setFormLoading(true);
     try {
-      if (isSignUp) {
+      if (authMode === 'signup') {
         if (!displayName.trim()) {
           setLocalError('Please provide your name.');
           setFormLoading(false);
@@ -146,26 +166,50 @@ export const AuthView: React.FC = () => {
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md">
             
             {/* Tab switch */}
-            <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl mb-6 border border-slate-800/60">
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(false); setLocalError(null); }}
-                className={`py-2 text-sm font-semibold rounded-lg transition-all ${
-                  !isSignUp ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setIsSignUp(true); setLocalError(null); }}
-                className={`py-2 text-sm font-semibold rounded-lg transition-all ${
-                  isSignUp ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
+            {authMode !== 'forgot' ? (
+              <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl mb-6 border border-slate-800/60">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signin'); setLocalError(null); setResetSuccessMessage(null); }}
+                  className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                    authMode === 'signin' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signup'); setLocalError(null); setResetSuccessMessage(null); }}
+                  className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                    authMode === 'signup' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+            ) : (
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Reset Password</h2>
+                  <p className="text-xs text-slate-400">We'll email you a secure link to reset it.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signin'); setLocalError(null); }}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            )}
+
+            {/* Success banner */}
+            {resetSuccessMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                <span className="leading-snug">{resetSuccessMessage}</span>
+              </div>
+            )}
 
             {/* Error banner */}
             {(localError || error) && (
@@ -175,46 +219,50 @@ export const AuthView: React.FC = () => {
               </div>
             )}
 
-            {/* Google Quick Sign-In */}
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={formLoading}
-              type="button"
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all duration-150 shadow-sm disabled:opacity-50"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
+            {authMode !== 'forgot' && (
+              <>
+                {/* Google Quick Sign-In */}
+                <button
+                  onClick={handleGoogleSignIn}
+                  disabled={formLoading}
+                  type="button"
+                  className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all duration-150 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.99 0 12s.45 3.83 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
 
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-900 px-3 text-slate-500 font-semibold tracking-wider">Or with email</span>
-              </div>
-            </div>
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-800" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-slate-900 px-3 text-slate-500 font-semibold tracking-wider">Or with email</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Email Form */}
             <form onSubmit={handleSubmit} className="space-y-3.5">
-              {isSignUp && (
+              {authMode === 'signup' && (
                 <>
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1">Your Full Name</label>
@@ -241,7 +289,7 @@ export const AuthView: React.FC = () => {
                           key={item.label}
                           type="button"
                           onClick={() => setRole(item.label)}
-                          className={`flex items-center gap-1.5 p-2 rounded-lg border text-left transition-colors ${
+                          className={`flex items-center gap-1.5 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
                             role === item.label
                               ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
                               : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:text-slate-200'
@@ -268,28 +316,47 @@ export const AuthView: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 transition-colors"
-                />
-              </div>
+              {authMode !== 'forgot' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-300">Password</label>
+                    {authMode === 'signin' && (
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode('forgot'); setLocalError(null); setResetSuccessMessage(null); }}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={formLoading}
-                className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all duration-150 shadow-md shadow-indigo-600/30 disabled:opacity-50"
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all duration-150 shadow-md shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
               >
                 {formLoading ? (
                   <span>Processing...</span>
                 ) : (
                   <>
-                    <span>{isSignUp ? 'Create My Account' : 'Sign In to Workspace'}</span>
+                    <span>
+                      {authMode === 'signup' 
+                        ? 'Create My Account' 
+                        : authMode === 'forgot'
+                        ? 'Send Password Reset Email'
+                        : 'Sign In to Workspace'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

@@ -20,12 +20,14 @@ import {
   Compass,
   Award,
   Check,
-  BarChart3
+  BarChart3,
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getTodayString, formatDateLabel, MOTIVATIONAL_QUOTES } from '../utils/date';
-import type { ViewTab, GoalCategory } from '../types';
+import type { ViewTab, GoalCategory, CalendarEvent } from '../types';
 
 interface DashboardViewProps {
   onNavigate: (tab: ViewTab) => void;
@@ -237,6 +239,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (completionPercentage / 100) * circumference;
+
+  // Saved Google Calendar Events
+  const calendarEvents = useMemo<CalendarEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('carinataskplus_calendar_events');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [];
+  }, []);
+
+  const todayClasses = useMemo(() => {
+    const curDay = new Date().getDay();
+    return calendarEvents.filter(e => e.date === today || e.dayOfWeek === curDay);
+  }, [calendarEvents, today]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12 transition-colors">
@@ -525,6 +543,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Google Calendar School Schedule Banner Widget */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-xs transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200/60 dark:border-blue-900/40">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                  Lịch học & Thời khóa biểu (Google Calendar)
+                </h3>
+                {todayClasses.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                    {todayClasses.length} ca học hôm nay
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {todayClasses.length > 0
+                  ? 'Theo dõi giờ vào lớp và phòng học trực quan ngay tại Dashboard'
+                  : 'Đồng bộ file .ics để CarinaTaskPlus hiển thị giờ học và hỗ trợ chuyển thành task'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate('schedule')}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-bold transition-all cursor-pointer self-start sm:self-auto"
+          >
+            <span>{calendarEvents.length > 0 ? 'Mở lịch học chi tiết' : 'Tải lên file lịch học (.ics)'}</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {todayClasses.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {todayClasses.map((cls) => (
+              <div
+                key={cls.id}
+                className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5 hover:border-blue-500/40 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                    <Clock className="w-3 h-3" />
+                    {cls.startTime} - {cls.endTime}
+                  </span>
+                  {cls.location && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+                      <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                      <span className="truncate">{cls.location}</span>
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">
+                  {cls.title}
+                </h4>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+            <span>
+              {calendarEvents.length > 0 
+                ? '🎉 Hôm nay bạn không có ca học nào trên lịch. Thời gian lý tưởng để tự học và làm đồ án!'
+                : '💡 Mẹo: Xuất file .ics từ Google Calendar và tải lên để quản lý trọn vẹn cả lịch học và việc cần làm!'}
+            </span>
+            <button
+              onClick={() => onNavigate('schedule')}
+              className="text-blue-600 dark:text-blue-400 hover:underline font-semibold shrink-0 ml-2 cursor-pointer"
+            >
+              {calendarEvents.length > 0 ? 'Xem cả tuần →' : 'Khám phá ngay →'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPI Highlight Cards */}

@@ -9,6 +9,9 @@ import {
   createUserWithEmailAndPassword, 
   fbSignOut,
   updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  reload,
   doc, 
   onSnapshot, 
   setDoc, 
@@ -28,6 +31,9 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, name: string, role?: string) => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  reloadUser: () => Promise<void>;
   continueAsGuest: () => void;
   signOut: () => Promise<void>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
@@ -194,6 +200,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(guestProfile));
   };
 
+  const sendVerificationEmail = async () => {
+    if (!auth.currentUser) throw new Error("No user is currently signed in");
+    await sendEmailVerification(auth.currentUser);
+  };
+
+  const sendPasswordReset = async (emailToReset: string) => {
+    if (!emailToReset) throw new Error("Please enter your email address");
+    await sendPasswordResetEmail(auth, emailToReset);
+  };
+
+  const reloadUser = async () => {
+    if (!auth.currentUser) return;
+    await reload(auth.currentUser);
+    setUser({ ...auth.currentUser });
+  };
+
   const signOut = async () => {
     try {
       if (isGuest) {
@@ -240,6 +262,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
+        sendVerificationEmail,
+        sendPasswordReset,
+        reloadUser,
         continueAsGuest,
         signOut,
         updateUserProfile,

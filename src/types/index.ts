@@ -76,7 +76,22 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
-export type ViewTab = 'dashboard' | 'goals' | 'habits' | 'focus' | 'reflection' | 'profile';
+export type ViewTab = 'dashboard' | 'goals' | 'habits' | 'focus' | 'reflection' | 'schedule' | 'profile';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  startTime: string; // e.g. "07:30"
+  endTime: string;   // e.g. "09:15"
+  date: string;      // YYYY-MM-DD
+  dayOfWeek?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+  rawStart?: string;
+  rawEnd?: string;
+  isAllDay?: boolean;
+  recurrence?: string;
+}
 
 export interface ProposedTask {
   id: string;
